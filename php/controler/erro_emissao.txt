@@ -1,0 +1,1 @@
+java.lang.RuntimeException: Falha ao emitir NFe

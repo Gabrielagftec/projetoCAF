@@ -1,0 +1,101 @@
+<?php
+
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+
+/**
+ * Description of Fornecedor
+ *
+ * @author Renan
+ */
+class Lote {
+    
+    public $id;
+    public $validade;
+    public $data_entrada;
+    public $grade;
+    public $quantidade_inicial;
+    public $excluido;
+    public $produto;
+    public $quantidade_real;
+    public $retiradas;
+    public $numero;
+    public $rua;
+    public $altura;
+    public $codigo_fabricante;
+    
+    function __construct() {
+        
+        $this->id = 0;
+        $this->validade = round(microtime(true)*1000);
+        $this->data_entrada = round(microtime(true)*1000);
+        $this->excluido = false;
+        $this->grade = new Grade("1");
+        $this->retiradas = array();
+        $this->numero = "999";
+        $this->altura = "999";
+        $this->rua = "999";
+        
+    }
+    
+    public function getItem(){
+        
+        return $this->grade->fractalizar($this->quantidade_inicial,$this->retiradas);
+        
+    }
+    
+    public function merge($con) {
+
+        if ($this->id == 0) {
+
+            $ps = $con->getConexao()->prepare("INSERT INTO lote(validade,data_entrada,id_produto,grade,excluido,quantidade_inicial,quantidade_real,codigo_fabricante,numero,rua,altura) VALUES(FROM_UNIXTIME(" . $this->validade . "/1000), FROM_UNIXTIME(".$this->data_entrada."/1000),".$this->produto->id.",'".$this->grade->str."',false,$this->quantidade_inicial,$this->quantidade_real,'".addslashes($this->codigo_fabricante)."','".addslashes($this->numero)."','".addslashes($this->rua)."','".addslashes($this->altura)."')");
+            $ps->execute();
+            $this->id = $ps->insert_id;
+            $ps->close();
+            
+        }else{
+            
+            $ps = $con->getConexao()->prepare("UPDATE lote SET validade = FROM_UNIXTIME(" .$this->validade. "/1000), data_entrada=FROM_UNIXTIME(".$this->data_entrada."/1000), id_produto=".$this->produto->id.",grade='".$this->grade->str."', excluido=false, quantidade_inicial=$this->quantidade_inicial, quantidade_real=$this->quantidade_real, codigo_fabricante='".addslashes($this->codigo_fabricante)."',numero='". addslashes($this->numero)."',rua='". addslashes($this->rua)."',altura='". addslashes($this->altura)."' WHERE id = ".$this->id);
+            $ps->execute();
+            $ps->close();
+            
+        }
+
+        if(isset($this->id_produto_pedido)){
+
+            $ps = $con->getConexao()->prepare("UPDATE produto_pedido_entrada SET lote_cadastrado=CONCAT(CONCAT(CONCAT(lote_cadastrado,';'),'$this->id'),';') WHERE id=$this->id_produto_pedido");
+            $ps->execute();
+            $ps->close();
+
+            $this->delete($con);
+
+        }
+        
+        $ses = new SessionManager();
+        $u = $ses->get('usuario');
+
+        if($u !== null){
+
+            $ps = $con->getConexao()->prepare("UPDATE lote SET id_usuario=$u->id,data_entrada=data_entrada,validade=validade WHERE id=$this->id");
+            $ps->execute();
+            $ps->close();
+
+        }
+
+
+    }
+    
+    public function delete($con){
+        
+        $ps = $con->getConexao()->prepare("UPDATE lote SET excluido = true WHERE id = ".$this->id);
+        $ps->execute();
+        $ps->close();
+        
+    }
+    
+    
+    
+}
